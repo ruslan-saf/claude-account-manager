@@ -1,12 +1,12 @@
 ' Claude Account Manager - system tray launcher (autostart entry)
 Option Explicit
-Dim sh, fso, userProfile, pythonw, script, exec, out
+Dim sh, fso, pythonw, script, exec, out
 
 Set sh = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-userProfile = sh.ExpandEnvironmentStrings("%USERPROFILE%")
-script = userProfile & "\Documents\GitHub\claude-account-manager\tray_manager.py"
+' tray_manager.py sits next to this launcher, wherever the repo is cloned.
+script = fso.BuildPath(fso.GetParentFolderName(WScript.ScriptFullName), "tray_manager.py")
 
 ' Resolve pythonw.exe dynamically via the "py" launcher instead of a
 ' hardcoded install path/version, so this works on any machine that has
@@ -17,7 +17,9 @@ Set exec = sh.Exec("py -3 -c ""import sys; print(sys.executable)""")
 Do While exec.Status = 0
     WScript.Sleep 50
 Loop
-out = Trim(exec.StdOut.ReadAll())
+' Trim() only strips spaces, not CR/LF -- py's stdout ends with a newline,
+' which left `out` failing every FileExists check silently.
+out = Replace(Replace(Trim(exec.StdOut.ReadAll()), vbCr, ""), vbLf, "")
 On Error Goto 0
 If out <> "" And fso.FileExists(out) Then
     pythonw = Replace(out, "python.exe", "pythonw.exe")
